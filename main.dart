@@ -17,21 +17,22 @@ Future main() async {
   print("Listenning on Localhost:${server.port}");
 
   await for (var req in server) {
-    if (await file.exists()) {
-      print('Serving ${file.path}');
-      req.response.headers.contentType = ContentType.HTML;
+    HttpResponse response = req.response
+      ..headers.contentType = ContentType.HTML;
+    if (req.method == 'GET') {
+      String filename = req.uri.pathSegments.last;
 
-      try {
-        await file.openRead().pipe(req.response);
-      } catch (e) {
-        print('Couldn\'t read file $e');
-        exit(-1);
+      if (!filename.endsWith('.html')) {
+        filename = filename + '.html';
       }
-    } else {
-      print('Can\'t open file');
-      req.response
-        ..statusCode = HttpStatus.NOT_FOUND
-        ..close();
+
+      File file = new File(filename);
+      if (!await file.exists()) {
+        file
+            .openWrite(mode: FileMode.write)
+            .write('<h1>This is $filename page</h1>');
+      }
+      file.openRead().pipe(response);
     }
   }
 }
